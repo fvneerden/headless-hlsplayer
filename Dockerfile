@@ -22,8 +22,8 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /hls-monitor /hls-monitor
 
 # ── Environment defaults (override with -e or docker-compose) ─────────────────
-ENV HLS_URL="https://stream.studiorhedenlive.nl/hlstv/stream.m3u8"
-ENV ALERT_URL="https://uptime.fardau.com/api/push/mGIWEeKvvT1cFdqjMdesZph3v8hxtHfl?status=up&msg=HLSTVStreamFail&ping="
+ENV HLS_URL=""
+ENV ALERT_URL=""
 ENV SEGMENT_TIMEOUT="15s"
 ENV FAIL_COOLDOWN="60s"
 

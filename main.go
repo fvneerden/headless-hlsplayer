@@ -15,8 +15,8 @@ import (
 
 // Config from environment variables
 var (
-	hlsURL         = getEnv("HLS_URL", "https://stream.studiorhedenlive.nl/hlstv/stream.m3u8")
-	alertURL       = getEnv("ALERT_URL", "https://uptime.fardau.com/api/push/mGIWEeKvvT1cFdqjMdesZph3v8hxtHfl?status=up&msg=HLSTVStreamFail&ping=")
+	hlsURL         = getEnv("HLS_URL", "")
+	alertURL       = getEnv("ALERT_URL", "")
 	segmentTimeout = getDurationEnv("SEGMENT_TIMEOUT", 15*time.Second)
 	failCooldown   = getDurationEnv("FAIL_COOLDOWN", 60*time.Second)
 )
@@ -206,6 +206,14 @@ func fireAlert(reason string) {
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lmsgprefix)
 	log.SetPrefix("[hls-monitor] ")
+
+	// Validate required env vars before doing anything
+	if hlsURL == "" {
+		log.Fatal("HLS_URL environment variable is required")
+	}
+	if alertURL == "" {
+		log.Fatal("ALERT_URL environment variable is required")
+	}
 
 	log.Printf("Starting HLS monitor")
 	log.Printf("  Stream:          %s", hlsURL)

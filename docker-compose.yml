@@ -6,8 +6,8 @@ services:
     restart: unless-stopped
 
     environment:
-      HLS_URL: "https://stream.studiorhedenlive.nl/hlstv/stream.m3u8"
-      ALERT_URL: "https://uptime.fardau.com/api/push/mGIWEeKvvT1cFdqjMdesZph3v8hxtHfl?status=up&msg=HLSTVStreamFail&ping="
+      HLS_URL: ""
+      ALERT_URL: ""
       SEGMENT_TIMEOUT: "15s"    # Max time to fetch a playlist or segment
       FAIL_COOLDOWN: "60s"      # Minimum time between alert fires
 
