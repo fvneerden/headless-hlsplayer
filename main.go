@@ -181,8 +181,19 @@ func nextPollDelay(pl *Playlist, newSegment bool) time.Duration {
 }
 
 func fireAlert(reason string) {
-	fullURL := alertURL + url.QueryEscape(reason)
-	log.Printf("🚨 Firing alert | reason: %s", reason)
+	// Parse the base alert URL and set the ping parameter safely,
+	// avoiding broken URLs when the reason contains colons or slashes.
+	u, err := url.Parse(alertURL)
+	if err != nil {
+		log.Printf("Alert URL is invalid: %v", err)
+		return
+	}
+	q := u.Query()
+	q.Set("ping", reason)
+	u.RawQuery = q.Encode()
+	fullURL := u.String()
+
+	log.Printf("\U0001f6a8 Firing alert | reason: %s", reason)
 	resp, err := httpClient.Get(fullURL)
 	if err != nil {
 		log.Printf("Alert request failed: %v", err)
