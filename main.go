@@ -50,6 +50,7 @@ func fetchURL(rawURL string, timeout time.Duration) ([]byte, error) {
 		return nil, fmt.Errorf("HTTP GET failed: %w", err)
 	}
 	defer resp.Body.Close()
+	log.Printf("   HTTP %d %s", resp.StatusCode, rawURL)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status: %d %s", resp.StatusCode, resp.Status)
 	}
