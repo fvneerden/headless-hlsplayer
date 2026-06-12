@@ -1,0 +1,19 @@
+services:
+  hls-monitor:
+    build: .
+    image: hls-monitor:latest
+    container_name: hls-monitor
+    restart: unless-stopped
+
+    environment:
+      HLS_URL: "https://stream.studiorhedenlive.nl/hlstv/stream.m3u8"
+      ALERT_URL: "https://uptime.fardau.com/api/push/mGIWEeKvvT1cFdqjMdesZph3v8hxtHfl?status=up&msg=HLSTVStreamFail&ping="
+      SEGMENT_TIMEOUT: "15s"    # Max time to fetch a playlist or segment
+      FAIL_COOLDOWN: "60s"      # Minimum time between alert fires
+
+    # Optional: persist logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
