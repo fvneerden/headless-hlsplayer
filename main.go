@@ -19,6 +19,7 @@ var (
 	alertURL       = getEnv("ALERT_URL", "")
 	segmentTimeout = getDurationEnv("SEGMENT_TIMEOUT", 15*time.Second)
 	failCooldown   = getDurationEnv("FAIL_COOLDOWN", 60*time.Second)
+	retryCount     = getIntEnv("RETRY_COUNT", 3)
 )
 
 var httpClient = &http.Client{
@@ -43,29 +44,62 @@ func getDurationEnv(key string, fallback time.Duration) time.Duration {
 	return fallback
 }
 
+func getIntEnv(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		i, err := strconv.Atoi(v)
+		if err == nil && i >= 0 {
+			return i
+		}
+		log.Printf("Warning: invalid integer for %s: %s", key, v)
+	}
+	return fallback
+}
+
+// fetchURL fetches the given URL with the specified timeout, retrying up to
+// retryCount times on failure. Retries use exponential backoff starting at 1s.
 func fetchURL(rawURL string, timeout time.Duration) ([]byte, error) {
 	c := &http.Client{Timeout: timeout}
-	resp, err := c.Get(rawURL)
-	if err != nil {
-		return nil, fmt.Errorf("HTTP GET failed: %w", err)
+
+	var lastErr error
+	for attempt := 0; attempt <= retryCount; attempt++ {
+		if attempt > 0 {
+			backoff := time.Duration(1<<(attempt-1)) * time.Second // 1s, 2s, 4s, …
+			log.Printf("   Retry %d/%d for %s (backoff %s)", attempt, retryCount, rawURL, backoff)
+			time.Sleep(backoff)
+		}
+
+		resp, err := c.Get(rawURL)
+		if err != nil {
+			lastErr = fmt.Errorf("HTTP GET failed: %w", err)
+			continue
+		}
+
+		log.Printf("   HTTP %d %s", resp.StatusCode, rawURL)
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("unexpected status: %d %s", resp.StatusCode, resp.Status)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			lastErr = fmt.Errorf("reading body failed: %w", err)
+			continue
+		}
+
+		return body, nil
 	}
-	defer resp.Body.Close()
-	log.Printf("   HTTP %d %s", resp.StatusCode, rawURL)
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d %s", resp.StatusCode, resp.Status)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading body failed: %w", err)
-	}
-	return body, nil
+
+	return nil, fmt.Errorf("all %d attempt(s) failed: %w", retryCount+1, lastErr)
 }
 
 // Playlist holds the parsed result of a media playlist.
 type Playlist struct {
-	Segments      []string      // ordered segment URLs
+	Segments       []string      // ordered segment URLs
 	TargetDuration time.Duration // #EXT-X-TARGETDURATION value
-	LastExtInf    time.Duration // duration of the last segment (#EXTINF)
+	LastExtInf     time.Duration // duration of the last segment (#EXTINF)
 }
 
 // resolveMediaURL follows a master playlist to its first media playlist URL,
@@ -221,6 +255,7 @@ func main() {
 	log.Printf("  Alert URL:       %s", alertURL)
 	log.Printf("  Segment timeout: %s", segmentTimeout)
 	log.Printf("  Fail cooldown:   %s", failCooldown)
+	log.Printf("  Retry count:     %d", retryCount)
 
 	// Resolve master → media playlist URL once at startup.
 	// If the stream is unavailable at boot we still proceed; resolution is
