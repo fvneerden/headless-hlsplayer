@@ -10,6 +10,7 @@ services:
       ALERT_URL: ""
       SEGMENT_TIMEOUT: "15s"    # Max time to fetch a playlist or segment
       FAIL_COOLDOWN: "60s"      # Minimum time between alert fires
+      RETRY_COUNT: "3"          # Number of retries per GET request (0 = no retries)
 
     # Optional: persist logs
     logging:
